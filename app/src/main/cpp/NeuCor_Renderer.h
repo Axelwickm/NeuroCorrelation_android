@@ -17,7 +17,7 @@ using namespace glm;
 
 class NeuCor_Renderer {
     public:
-        NeuCor_Renderer(NeuCor* _brain, ANativeWindow* win);
+        NeuCor_Renderer(NeuCor* _brain);
         ~NeuCor_Renderer();
 
         float getDeltaTime();
@@ -39,7 +39,6 @@ class NeuCor_Renderer {
 
         void updateView();
         void pollWindow();
-        ANativeWindow* window;
 
         typedef void (*CallbackType)();
         void setDestructCallback(CallbackType f);

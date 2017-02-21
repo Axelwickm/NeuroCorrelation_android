@@ -1,4 +1,5 @@
 #include "NeuCor_Renderer.h"
+#include <android/asset_manager.h>
 
 /*  .h & .cpp includes  */
 #include "NeuCor.h"
@@ -19,6 +20,37 @@ using namespace glm;
 #include <GLES3/gl3.h>
 
 #include "picopng/picopng.cpp"
+
+AAssetManager * mgr = NULL;
+
+
+// For reading files
+static int android_read(void* cookie, char* buf, int size) {
+    return AAsset_read((AAsset*)cookie, buf, size);
+}
+
+static int android_write(void* cookie, const char* buf, int size) {
+    return EACCES; // can't provide write access to the apk
+}
+
+static fpos_t android_seek(void* cookie, fpos_t offset, int whence) {
+    return AAsset_seek((AAsset*)cookie, offset, whence);
+}
+
+static int android_close(void* cookie) {
+    AAsset_close((AAsset*)cookie);
+    return 0;
+}
+
+FILE* android_fopen(const char* fname, const char* mode) {
+    if(mode[0] == 'w') return NULL;
+    AAsset* asset = AAssetManager_open(mgr, fname, 0);
+    if(!asset) return NULL;
+
+    return funopen(asset, android_read, android_write, android_seek, android_close);
+}
+
+
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path){
 
@@ -115,7 +147,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 }
 
 
-NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain, ANativeWindow* win)
+NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
 :camPos(5,5,5), camDir(0,0,0), camUp(0,1,0), camHA(0.75), camVA(3.8), lastTime(0), deltaTime(1)
 {
     brain = _brain;
@@ -127,9 +159,10 @@ NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain, ANativeWindow* win)
     mouseInWindow = true;
     showInterface = true;
 
-    window = win;
-    width = ANativeWindow_getWidth(window);
-    height = ANativeWindow_getHeight(window);
+    /*width = ANativeWindow_getWidth(window);
+    height = ANativeWindow_getHeight(window);*/
+    width = 500;
+    height = 500;
 
     cameraMode = cameraModes::CAMERA_ORBIT;
     renderMode = renderingModes::RENDER_VOLTAGE;
@@ -162,7 +195,6 @@ NeuCor_Renderer::realTimeStats::realTimeStats(){
 NeuCor_Renderer::~NeuCor_Renderer() {
     /* Destroy window and terminate glfw */
     //ImGui_ImplGlfwGL3_Shutdown();
-    ANativeWindow_release(window);
     exit(EXIT_SUCCESS);
 
     /* Call the destruct callback function if it has been set */
@@ -328,6 +360,10 @@ void NeuCor_Renderer::updateView(){
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
     double currentTime = now.tv_sec*1000000000LL + now.tv_nsec;
+
+    glClearColor((float)rand()/RAND_MAX,(float) rand()/RAND_MAX,(float) rand()/RAND_MAX, 0.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    return;
 
     deltaTime = float(currentTime - lastTime);
     lastTime = currentTime;
