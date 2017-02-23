@@ -121,7 +121,7 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	if ( InfoLogLength > 0 ){
 		std::vector<char> FragmentShaderErrorMessage(InfoLogLength+1);
 		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-		printf("%s\n", &FragmentShaderErrorMessage[0]);
+		__android_log_print(ANDROID_LOG_FATAL, "Shader Compile", "%s", &FragmentShaderErrorMessage[0]);
 	}
 
 
@@ -139,7 +139,7 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	if ( InfoLogLength > 0 ){
 		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
 		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-		printf("%s\n", &ProgramErrorMessage[0]);
+		__android_log_print(ANDROID_LOG_FATAL, "Shader linking", "%s", &ProgramErrorMessage[0]);
 	}
 
 
@@ -368,9 +368,9 @@ void NeuCor_Renderer::updateView(){
     clock_gettime(CLOCK_MONOTONIC, &now);
     double currentTime = now.tv_sec*1000000000LL + now.tv_nsec;
 
-    glClearColor((float)rand()/RAND_MAX,(float) rand()/RAND_MAX,(float) rand()/RAND_MAX, 0.f);
+    /*glClearColor((float)rand()/RAND_MAX,(float) rand()/RAND_MAX,(float) rand()/RAND_MAX, 0.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    return;
+    */
 
     deltaTime = float(currentTime - lastTime);
     lastTime = currentTime;
@@ -396,6 +396,7 @@ void NeuCor_Renderer::updateView(){
     synPot.reserve(brain->neurons.size()*8.0);
     for (auto &neu : brain->neurons){
         for (auto &syn : neu.outSynapses){
+
             connections.push_back(brain->getNeuron(syn.pN)->position());
             if (connections.back().x != connections.back().x){ // For debugging
                 std::cout<<"NaN coord!\n";
