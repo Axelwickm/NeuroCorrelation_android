@@ -64,25 +64,27 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
         // Read the Vertex Shader code from the file
         FILE *VeShader = android_fopen(vertex_file_path, "r");
         fseek(VeShader, 0, SEEK_END);
-        long fsize = ftell(VeShader);
+        long fsize = ftell(VeShader)+1;
         fseek(VeShader, 0, SEEK_SET);  //same as rewind(f);
 
-        VeString = (char *) malloc(fsize + 1);
+        VeString = (char *) malloc(fsize+1);
         fread(VeString, fsize, 1, VeShader);
         fclose(VeShader);
     }
 
     std::string VertexShaderCode(VeString);
 
+    __android_log_print(ANDROID_LOG_INFO, "Shader source", "%s", VertexShaderCode.c_str());
+
 	// Read the Fragment Shader code from the file
     char* FaString;
     {
-        FILE * FaShader = android_fopen(vertex_file_path, "r");
+        FILE * FaShader = android_fopen(fragment_file_path, "r");
         fseek(FaShader, 0, SEEK_END);
-        long fsize = ftell(FaShader);
+        long fsize = ftell(FaShader)+1;
         fseek(FaShader, 0, SEEK_SET);  //same as rewind(f);
 
-        FaString = (char*) malloc(fsize + 1);
+        FaString = (char*) malloc(fsize+1);
         fread(FaString, fsize, 1, FaShader);
         fclose(FaShader);
     }
@@ -93,7 +95,6 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 
 
 	// Compile Vertex Shader
-	printf("Compiling shader : %s\n", vertex_file_path);
 	char const * VertexSourcePointer = VertexShaderCode.c_str();
 	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
 	glCompileShader(VertexShaderID);
@@ -110,7 +111,6 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 
 
 	// Compile Fragment Shader
-	printf("Compiling shader : %s\n", fragment_file_path);
 	char const * FragmentSourcePointer = FragmentShaderCode.c_str();
 	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
 	glCompileShader(FragmentShaderID);
@@ -121,13 +121,12 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	if ( InfoLogLength > 0 ){
 		std::vector<char> FragmentShaderErrorMessage(InfoLogLength+1);
 		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-		__android_log_print(ANDROID_LOG_FATAL, "Shader Compile", "%s", &FragmentShaderErrorMessage[0]);
+		__android_log_print(ANDROID_LOG_FATAL, "Shader compilation error", "Path: %s \n %s", fragment_file_path, &FragmentShaderErrorMessage[0]);
 	}
 
 
 
 	// Link the program
-	printf("Linking program\n");
 	GLuint ProgramID = glCreateProgram();
 	glAttachShader(ProgramID, VertexShaderID);
 	glAttachShader(ProgramID, FragmentShaderID);
@@ -139,7 +138,7 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	if ( InfoLogLength > 0 ){
 		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
 		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-		__android_log_print(ANDROID_LOG_FATAL, "Shader linking", "%s", &ProgramErrorMessage[0]);
+		__android_log_print(ANDROID_LOG_FATAL, "Shader linking error",  "Path: %s \n %s", vertex_file_path, &ProgramErrorMessage[0]);
 	}
 
 

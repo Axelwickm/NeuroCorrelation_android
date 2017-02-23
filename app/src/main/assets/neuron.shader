@@ -1,4 +1,4 @@
-//#version 330 core
+#version 300 es
 
 layout(location = 0) in vec3 squareVertices;
 layout(location = 1) in vec3 xyz; // Position of the centre of the neuron
