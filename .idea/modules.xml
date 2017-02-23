@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SpikingBrain.iml" filepath="$PROJECT_DIR$/SpikingBrain.iml" />
+      <module fileurl="file://$PROJECT_DIR$/NeuroCorrelation_android.iml" filepath="$PROJECT_DIR$/NeuroCorrelation_android.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

@@ -1,5 +1,6 @@
 #include "NeuCor_Renderer.h"
 #include <android/asset_manager.h>
+#include <android/log.h>
 
 /*  .h & .cpp includes  */
 #include "NeuCor.h"
@@ -52,35 +53,40 @@ FILE* android_fopen(const char* fname, const char* mode) {
 
 
 
-GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path){
+GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path){
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 
-	// Read the Vertex Shader code from the file
-	std::string VertexShaderCode;
-	std::ifstream VertexShaderStream(vertex_file_path, std::ios::in);
-	if(VertexShaderStream.is_open()){
-		std::string Line = "";
-		while(getline(VertexShaderStream, Line))
-			VertexShaderCode += "\n" + Line;
-		VertexShaderStream.close();
-	}else{
-		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertex_file_path);
-		getchar();
-		return 0;
-	}
+    char *VeString;
+    {
+        // Read the Vertex Shader code from the file
+        FILE *VeShader = android_fopen(vertex_file_path, "r");
+        fseek(VeShader, 0, SEEK_END);
+        long fsize = ftell(VeShader);
+        fseek(VeShader, 0, SEEK_SET);  //same as rewind(f);
+
+        VeString = (char *) malloc(fsize + 1);
+        fread(VeString, fsize, 1, VeShader);
+        fclose(VeShader);
+    }
+
+    std::string VertexShaderCode(VeString);
 
 	// Read the Fragment Shader code from the file
-	std::string FragmentShaderCode;
-	std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
-	if(FragmentShaderStream.is_open()){
-		std::string Line = "";
-		while(getline(FragmentShaderStream, Line))
-			FragmentShaderCode += "\n" + Line;
-		FragmentShaderStream.close();
-	}
+    char* FaString;
+    {
+        FILE * FaShader = android_fopen(vertex_file_path, "r");
+        fseek(FaShader, 0, SEEK_END);
+        long fsize = ftell(FaShader);
+        fseek(FaShader, 0, SEEK_SET);  //same as rewind(f);
+
+        FaString = (char*) malloc(fsize + 1);
+        fread(FaString, fsize, 1, FaShader);
+        fclose(FaShader);
+    }
+    std::string FragmentShaderCode(FaString);
 
 	GLint Result = GL_FALSE;
 	int InfoLogLength;
@@ -147,7 +153,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 }
 
 
-NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
+NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain, AAssetManager* assetManager)
 :camPos(5,5,5), camDir(0,0,0), camUp(0,1,0), camHA(0.75), camVA(3.8), lastTime(0), deltaTime(1)
 {
     brain = _brain;
@@ -171,6 +177,7 @@ NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
 
     //realTimeStats logger();
 
+    mgr = assetManager;
     /* Initiates OpenGL ES*/
     initOpenGL();
 

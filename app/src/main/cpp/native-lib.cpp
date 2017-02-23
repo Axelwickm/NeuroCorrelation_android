@@ -1,4 +1,6 @@
 #include <jni.h>
+#include <android/asset_manager_jni.h>
+#include <android/log.h>
 #include <string>
 
 #include "NeuCor.h"
@@ -17,9 +19,10 @@ void Java_com_example_axel_spikingbrain_MainActivity_initBrain(
 
 extern "C"
 JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_on_1surface_1created
-        (JNIEnv * env, jclass cls) {
-    //mgr = AAssetManager_fromJava(env, assetManager);
-    renderer = std::unique_ptr<NeuCor_Renderer>(new NeuCor_Renderer(brain.get()));
+        (JNIEnv * env, jclass cls, jobject assetManager) {
+
+    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+    renderer = std::unique_ptr<NeuCor_Renderer>(new NeuCor_Renderer(brain.get(), mgr));
 }
 
 extern "C"

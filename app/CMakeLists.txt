@@ -17,14 +17,15 @@ add_library( NeuCor_Renderer-lib SHARED src/main/cpp/NeuCor_Renderer.cpp )
 
 #Should be set to the boost include DIR
 set( Boost_ROOT D:/boost/boost_1_63_0/boost_1_63_0 )
+set( Boost_ROOT C:/boost )
 include_directories( ${Boost_ROOT} )
 include_directories( src/main/cpp/glm )
 include_directories( src/main/cpp/picopng )
 
 find_library( log-lib log )
-find_library( asset-lib asset )
+#find_library( asset-lib asset )
 find_library( GLES3-lib GLESv3 )
 find_library( android-lib android )
 
-target_link_libraries( NeuCor_Renderer-lib ${GLES3-lib} ${android-lib} &{asset-lib} NeuCor-lib )
-target_link_libraries( native-lib ${log-lib} ${android-lib} &{asset-lib} NeuCor-lib NeuCor_Renderer-lib )
+target_link_libraries( NeuCor_Renderer-lib ${GLES3-lib} ${android-lib} ${log-lib} NeuCor-lib )
+target_link_libraries( native-lib ${log-lib} ${android-lib} NeuCor-lib NeuCor_Renderer-lib )

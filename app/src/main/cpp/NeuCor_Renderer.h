@@ -11,13 +11,14 @@
 #include <memory>
 #include <GLES3/gl3.h>
 #include <android/native_window_jni.h>
+#include <android/asset_manager.h>
 
 #include "glm/glm.hpp"
 using namespace glm;
 
 class NeuCor_Renderer {
     public:
-        NeuCor_Renderer(NeuCor* _brain);
+        NeuCor_Renderer(NeuCor* _brain, AAssetManager* assetManager);
         ~NeuCor_Renderer();
 
         float getDeltaTime();
