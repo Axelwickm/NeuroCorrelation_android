@@ -70,23 +70,25 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
         VeString = (char *) malloc(fsize+1);
         fread(VeString, fsize, 1, VeShader);
         fclose(VeShader);
+        VeString[fsize] = '\0';
     }
 
     std::string VertexShaderCode(VeString);
 
-    __android_log_print(ANDROID_LOG_INFO, "Shader source", "%s", VertexShaderCode.c_str());
+    //__android_log_print(ANDROID_LOG_INFO, "Shader source", "%s", VertexShaderCode.c_str());
 
 	// Read the Fragment Shader code from the file
     char* FaString;
     {
         FILE * FaShader = android_fopen(fragment_file_path, "r");
         fseek(FaShader, 0, SEEK_END);
-        long fsize = ftell(FaShader)+1;
+        long fsize = ftell(FaShader);
         fseek(FaShader, 0, SEEK_SET);  //same as rewind(f);
 
         FaString = (char*) malloc(fsize+1);
         fread(FaString, fsize, 1, FaShader);
         fclose(FaShader);
+        FaString[fsize] = '\0';
     }
     std::string FragmentShaderCode(FaString);
 
@@ -612,6 +614,8 @@ void NeuCor_Renderer::updateCamPos(){
     if (cameraMode == CAMERA_MOUSE_LOOK){
         float deltaX = cursorX-xpos;
         float deltaY = cursorY-ypos;
+        camHA += 0.1;
+        camVA += 0.5;
 
         camHA -= 0.15 * deltaTime * deltaX;
         camVA  += 0.15 * deltaTime * deltaY;

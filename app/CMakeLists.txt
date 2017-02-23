@@ -17,7 +17,7 @@ add_library( NeuCor_Renderer-lib SHARED src/main/cpp/NeuCor_Renderer.cpp )
 
 #Should be set to the boost include DIR
 set( Boost_ROOT D:/boost/boost_1_63_0/boost_1_63_0 )
-set( Boost_ROOT C:/boost )
+#set( Boost_ROOT C:/boost )
 include_directories( ${Boost_ROOT} )
 include_directories( src/main/cpp/glm )
 include_directories( src/main/cpp/picopng )
