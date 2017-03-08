@@ -378,9 +378,68 @@ void NeuCor_Renderer::updateView(){
     FPS = (FPS*20.0+1.0/deltaTime)/21.0; // Makes FPS change slower
     float aspect = (float) width / (float)height;
 
-    if (runBrainOnUpdate && realRunspeed && !paused){
+    static bool once = true;
+    static float points[] = {
+            0.0f,  0.5f,  0.0f,
+            0.5f, -0.5f,  0.0f,
+            -0.5f, -0.5f,  0.0f
+    };
+    static GLuint vbo = 0;
+    static GLuint vao = 0;
+    static GLuint vs;
+    static GLuint fs;
+    static GLuint shader_programme;
+    if (once){
+        once = false;
+        glGenBuffers(1, &vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), points, GL_STATIC_DRAW);
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+        const char* vertex_shader =
+                "#version 400\n"
+                        "in vec3 vp;"
+                        "void main() {"
+                        "  gl_Position = vec4(vp, 1.0);"
+                        "}";
+
+        const char* fragment_shader =
+                "#version 400\n"
+                        "out vec4 frag_colour;"
+                        "void main() {"
+                        "  frag_colour = vec4(0.5, 0.0, 0.5, 1.0);"
+                        "}";
+
+
+        vs = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vs, 1, &vertex_shader, NULL);
+        glCompileShader(vs);
+        fs = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fs, 1, &fragment_shader, NULL);
+        glCompileShader(fs);
+
+        shader_programme = glCreateProgram();
+        glAttachShader(shader_programme, fs);
+        glAttachShader(shader_programme, vs);
+        glLinkProgram(shader_programme);
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shader_programme);
+    glBindVertexArray(vao);
+    // draw points 0-3 from the currently bound VAO with current in-use shader
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    return;
+
+    if (runBrainOnUpdate && realRunspeed && !paused) {
         float staticRunSpeed = brain->runSpeed;
-        brain->runSpeed = staticRunSpeed*deltaTime;
+        brain->runSpeed = staticRunSpeed * deltaTime;
         brain->run();
         brain->runSpeed = staticRunSpeed;
     }
@@ -394,49 +453,52 @@ void NeuCor_Renderer::updateView(){
     closenessValues.resize(brain->neurons.size(), 0);
     std::vector<coord3> connections;
     std::vector<float> synPot;
-    synPot.reserve(brain->neurons.size()*8.0);
-    for (auto &neu : brain->neurons){
-        for (auto &syn : neu.outSynapses){
+    synPot.reserve(brain->neurons.size() * 8.0);
+    for (auto &neu : brain->neurons) {
+        for (auto &syn : neu.outSynapses) {
 
             connections.push_back(brain->getNeuron(syn.pN)->position());
-            if (connections.back().x != connections.back().x){ // For debugging
-                std::cout<<"NaN coord!\n";
+            if (connections.back().x != connections.back().x) { // For debugging
+                std::cout << "NaN coord!\n";
             }
             connections.push_back(brain->getNeuron(syn.tN)->position());
-            if (connections.back().x != connections.back().x){ // For debugging
-                std::cout<<"NaN coord!\n";
+            if (connections.back().x != connections.back().x) { // For debugging
+                std::cout << "NaN coord!\n";
             }
-            if (PRINT_CONNECTIONS_EVERY_FRAME) std::cout<<syn.pN<<" "<<connections.at(connections.size()-2).x<<" -> "<<syn.tN<<" "<<connections.back().x<<" | ";
+            if (PRINT_CONNECTIONS_EVERY_FRAME)
+                std::cout << syn.pN << " " << connections.at(connections.size() - 2).x <<
+                " -> " << syn.tN << " " << connections.back().x << " | ";
 
 
-            if (renderMode == RENDER_VOLTAGE){
-                synPot.push_back(syn.getPrePot()+0.03);
-                synPot.push_back(syn.getPostPot()+0.03);
+            if (renderMode == RENDER_VOLTAGE) {
+                synPot.push_back(syn.getPrePot() + 0.03);
+                synPot.push_back(syn.getPostPot() + 0.03);
             }
-            else if (renderMode == RENDER_PLASTICITY){
-                synPot.push_back(syn.getWeight()/2.0);
-                synPot.push_back(syn.getWeight()/2.0);
-                if (RENDER_PLASTICITY_onlyActive){
-                    synPot.at(synPot.size()-2) *= log(brain->getNeuron(syn.pN)->activity()+1.f);
-                    synPot.back()              *= log(brain->getNeuron(syn.tN)->activity()+1.f);
+            else if (renderMode == RENDER_PLASTICITY) {
+                synPot.push_back(syn.getWeight() / 2.0);
+                synPot.push_back(syn.getWeight() / 2.0);
+                if (RENDER_PLASTICITY_onlyActive) {
+                    synPot.at(synPot.size() - 2) *= log(
+                            brain->getNeuron(syn.pN)->activity() + 1.f);
+                    synPot.back() *= log(brain->getNeuron(syn.tN)->activity() + 1.f);
                 }
 
             }
-            else if (renderMode == RENDER_ACTIVITY){
-                synPot.push_back(log(brain->getNeuron(syn.pN)->activity()+1.f));
-                synPot.push_back(log(brain->getNeuron(syn.tN)->activity()+1.f));
+            else if (renderMode == RENDER_ACTIVITY) {
+                synPot.push_back(log(brain->getNeuron(syn.pN)->activity() + 1.f));
+                synPot.push_back(log(brain->getNeuron(syn.tN)->activity() + 1.f));
             }
-            else if (renderMode == RENDER_CLOSENESS){
+            else if (renderMode == RENDER_CLOSENESS) {
                 synPot.push_back(powf(closenessValues.at(syn.pN), closenessIntensity));
                 synPot.push_back(powf(closenessValues.at(syn.tN), closenessIntensity));
             }
             else if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount++;
         }
     }
-    if (PRINT_CONNECTIONS_EVERY_FRAME) std::cout<<std::endl;
+    if (PRINT_CONNECTIONS_EVERY_FRAME) std::cout << std::endl;
 
     logger.neuronCount = brain->neurons.size();
-    if (renderMode != RENDER_NOSYNAPSES) logger.synapseCount = synPot.size()/2;
+    if (renderMode != RENDER_NOSYNAPSES) logger.synapseCount = synPot.size() / 2;
 
     if (renderMode == RENDER_NOSYNAPSES) goto renderNeurons; // Skip rendering synapses
 
@@ -444,7 +506,6 @@ void NeuCor_Renderer::updateView(){
     renderSynapses:
 
     glUseProgram(synapseProgramID);
-
 
     glBindBuffer(GL_ARRAY_BUFFER, synapse_PT_buffer);
     glBufferSubData(GL_ARRAY_BUFFER, 0, connections.size() * sizeof(coord3), NULL);
