@@ -3,10 +3,13 @@ package com.example.axel.spikingbrain;
 import android.opengl.GLSurfaceView;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import static com.example.axel.spikingbrain.LibJNIWrapper.init;
 
 public class MainActivity extends AppCompatActivity {
     GLSurfaceView glSurfaceView;
@@ -16,12 +19,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        initBrain();
+
+        init();
 
         glSurfaceView = new GLSurfaceView(this);
 
-        glSurfaceView.setEGLContextClientVersion(2);
-        glSurfaceView.setRenderer(new RendererWrapper(getApplicationContext()));
+        glSurfaceView.setEGLContextClientVersion(3);
+        glSurfaceView.setRenderer(new MyGLRenderer());
+        glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         rendererSet = true;
         setContentView(glSurfaceView);
 
@@ -44,12 +49,6 @@ public class MainActivity extends AppCompatActivity {
             glSurfaceView.onResume();
         }
     }
-
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native void initBrain();
 
     // Used to load the 'native-lib' library on application startup.
     static {

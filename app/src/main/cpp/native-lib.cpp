@@ -5,35 +5,36 @@
 
 #include "NeuCor.h"
 #include "NeuCor_Renderer.h"
-#include <memory>
 
 std::unique_ptr<NeuCor> brain;
 std::unique_ptr<NeuCor_Renderer> renderer;
 
 extern "C"
-void Java_com_example_axel_spikingbrain_MainActivity_initBrain(
-        JNIEnv* env,
-        jobject /* this */) {
-    brain = std::unique_ptr<NeuCor>(new NeuCor(250));
-}
-
-extern "C"
-JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_on_1surface_1created
-        (JNIEnv * env, jclass cls, jobject assetManager) {
-
-    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
-    renderer = std::unique_ptr<NeuCor_Renderer>(new NeuCor_Renderer(brain.get(), mgr));
-}
-
-extern "C"
-JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_on_1surface_1changed
-        (JNIEnv * env, jclass cls, jint width, jint height) {
-    //on_surface_changed();
-
-}
-
-extern "C"
-JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_on_1draw_1frame
+JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_init
         (JNIEnv * env, jclass cls) {
-    renderer->updateView();
+    brain = std::unique_ptr<NeuCor>(new NeuCor(250));
+    renderer = std::unique_ptr<NeuCor_Renderer>(new NeuCor_Renderer(brain.get()));
+}
+
+extern "C"
+JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_runBrain
+        (JNIEnv * env, jclass cls) {
+    brain->run();
+}
+
+extern "C"
+JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getRenderData
+        (JNIEnv * env, jclass cls) {
+    renderArrays rA = renderer->getRenderArrays();
+
+    jfloatArray syn_connections;
+    syn_connections = (*env).NewFloatArray(rA.syn_connections->size()*3);
+    (*env).SetFloatArrayRegion(syn_connections, 0, rA.syn_connections->size()*3, (float*) &rA.syn_connections->at(0));
+
+    jfloatArray syn_potential;
+    syn_potential = (*env).NewFloatArray(rA.syn_potential->size());
+    (*env).SetFloatArrayRegion(syn_potential, 0, rA.syn_potential->size(), &rA.syn_potential->at(0));
+
+    delete rA.syn_connections;
+    delete rA.syn_potential;
 }

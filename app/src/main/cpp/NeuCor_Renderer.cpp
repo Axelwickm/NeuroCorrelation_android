@@ -1,5 +1,4 @@
 #include "NeuCor_Renderer.h"
-#include <android/asset_manager.h>
 #include <android/log.h>
 
 /*  .h & .cpp includes  */
@@ -20,141 +19,8 @@ using namespace glm;
 #include "glm/gtc/matrix_transform.hpp"
 #include <GLES3/gl3.h>
 
-#include "picopng/picopng.cpp"
 
-AAssetManager * mgr = NULL;
-
-
-// For reading files
-static int android_read(void* cookie, char* buf, int size) {
-    return AAsset_read((AAsset*)cookie, buf, size);
-}
-
-static int android_write(void* cookie, const char* buf, int size) {
-    return EACCES; // can't provide write access to the apk
-}
-
-static fpos_t android_seek(void* cookie, fpos_t offset, int whence) {
-    return AAsset_seek((AAsset*)cookie, offset, whence);
-}
-
-static int android_close(void* cookie) {
-    AAsset_close((AAsset*)cookie);
-    return 0;
-}
-
-FILE* android_fopen(const char* fname, const char* mode) {
-    if(mode[0] == 'w') return NULL;
-    AAsset* asset = AAssetManager_open(mgr, fname, 0);
-    if(!asset) return NULL;
-
-    return funopen(asset, android_read, android_write, android_seek, android_close);
-}
-
-
-
-GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path){
-
-	// Create the shaders
-	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-
-    char *VeString;
-    {
-        // Read the Vertex Shader code from the file
-        FILE *VeShader = android_fopen(vertex_file_path, "r");
-        fseek(VeShader, 0, SEEK_END);
-        long fsize = ftell(VeShader)+1;
-        fseek(VeShader, 0, SEEK_SET);  //same as rewind(f);
-
-        VeString = (char *) malloc(fsize+1);
-        fread(VeString, fsize, 1, VeShader);
-        fclose(VeShader);
-        VeString[fsize] = '\0';
-    }
-
-    std::string VertexShaderCode(VeString);
-
-    //__android_log_print(ANDROID_LOG_INFO, "Shader source", "%s", VertexShaderCode.c_str());
-
-	// Read the Fragment Shader code from the file
-    char* FaString;
-    {
-        FILE * FaShader = android_fopen(fragment_file_path, "r");
-        fseek(FaShader, 0, SEEK_END);
-        long fsize = ftell(FaShader);
-        fseek(FaShader, 0, SEEK_SET);  //same as rewind(f);
-
-        FaString = (char*) malloc(fsize+1);
-        fread(FaString, fsize, 1, FaShader);
-        fclose(FaShader);
-        FaString[fsize] = '\0';
-    }
-    std::string FragmentShaderCode(FaString);
-
-	GLint Result = GL_FALSE;
-	int InfoLogLength;
-
-
-	// Compile Vertex Shader
-	char const * VertexSourcePointer = VertexShaderCode.c_str();
-	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
-	glCompileShader(VertexShaderID);
-
-	// Check Vertex Shader
-	glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if ( InfoLogLength > 0 ){
-		std::vector<char> VertexShaderErrorMessage(InfoLogLength+1);
-		glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
-		printf("%s\n", &VertexShaderErrorMessage[0]);
-	}
-
-
-
-	// Compile Fragment Shader
-	char const * FragmentSourcePointer = FragmentShaderCode.c_str();
-	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
-	glCompileShader(FragmentShaderID);
-
-	// Check Fragment Shader
-	glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if ( InfoLogLength > 0 ){
-		std::vector<char> FragmentShaderErrorMessage(InfoLogLength+1);
-		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-		__android_log_print(ANDROID_LOG_FATAL, "Shader compilation error", "Path: %s \n %s", fragment_file_path, &FragmentShaderErrorMessage[0]);
-	}
-
-
-
-	// Link the program
-	GLuint ProgramID = glCreateProgram();
-	glAttachShader(ProgramID, VertexShaderID);
-	glAttachShader(ProgramID, FragmentShaderID);
-	glLinkProgram(ProgramID);
-
-	// Check the program
-	glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
-	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if ( InfoLogLength > 0 ){
-		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
-		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-		__android_log_print(ANDROID_LOG_FATAL, "Shader linking error",  "Path: %s \n %s", vertex_file_path, &ProgramErrorMessage[0]);
-	}
-
-
-	glDetachShader(ProgramID, VertexShaderID);
-	glDetachShader(ProgramID, FragmentShaderID);
-
-	glDeleteShader(VertexShaderID);
-	glDeleteShader(FragmentShaderID);
-
-	return ProgramID;
-}
-
-
-NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain, AAssetManager* assetManager)
+NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
 :camPos(5,5,5), camDir(0,0,0), camUp(0,1,0), camHA(0.75), camVA(3.8), lastTime(0), deltaTime(1)
 {
     brain = _brain;
@@ -178,16 +44,11 @@ NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain, AAssetManager* assetManager)
 
     //realTimeStats logger();
 
-    mgr = assetManager;
-    /* Initiates OpenGL ES*/
-    initOpenGL();
-
     activityExpression = (char*) calloc(256, 1);
     activityExpression[0] = 'a';
     closenessIntensity = 0.8;
 
     /* Load resources */
-    loadResources();
     updateCamPos();
     navigationMode = true;
     destructCallback = NULL;
@@ -202,7 +63,6 @@ NeuCor_Renderer::realTimeStats::realTimeStats(){
 
 NeuCor_Renderer::~NeuCor_Renderer() {
     /* Destroy window and terminate glfw */
-    //ImGui_ImplGlfwGL3_Shutdown();
     exit(EXIT_SUCCESS);
 
     /* Call the destruct callback function if it has been set */
@@ -222,17 +82,6 @@ void NeuCor_Renderer::initOpenGL(){
 
     glLineWidth(2.5);
 
-    synapseProgramID = LoadShaders( "synapse.shader", "synapse.Fshader" );
-    neuronProgramID = LoadShaders( "neuron.shader", "neuron.Fshader" );
-
-    glUseProgram(neuronProgramID);
-	ViewProjMatrixID[0] = glGetUniformLocation(neuronProgramID, "VP");
-	aspectID[0] = glGetUniformLocation(neuronProgramID, "aspect");
-
-	glUseProgram(synapseProgramID);
-	ViewProjMatrixID[1] = glGetUniformLocation(neuronProgramID, "VP");
-	aspectID[1] = glGetUniformLocation(neuronProgramID, "aspect");
-
     static const GLfloat g_vertex_buffer_data[] = {
         -0.5f, -0.5f, 0.0f,
         0.5f, -0.5f, 0.0f,
@@ -240,87 +89,9 @@ void NeuCor_Renderer::initOpenGL(){
         0.5f, 0.5f, 0.0f,
     };
 
-    glGenBuffers(1, &billboard_vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-
-
-    glGenBuffers(1, &neuron_position_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, neuron_position_buffer);
-    glBufferData(GL_ARRAY_BUFFER, brain->positions.size()* 3 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
-
-    glGenBuffers(1, &neuron_potAct_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, neuron_potAct_buffer);
-    glBufferData(GL_ARRAY_BUFFER, brain->positions.size()* 3 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
-
-
-    glGenBuffers(1, &synapse_PT_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, synapse_PT_buffer);
-    glBufferData(GL_ARRAY_BUFFER, brain->neurons.size() * 5 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
-
-    glGenBuffers(1, &synapse_potential_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, synapse_potential_buffer);
-    glBufferData(GL_ARRAY_BUFFER, brain->neurons.size() * 5 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
-
 }
 
-void NeuCor_Renderer::loadResources() {
-    const char* filename = "neuron.png";
-
-    //load and decode
-    std::vector<unsigned char> buffer, image;
-    loadFile(buffer, filename);
-    unsigned long w, h;
-
-    int error = decodePNG(image, w, h, &buffer[0], (unsigned long)buffer.size());
-    if(error != 0) std::cout << "error: " << error << std::endl;
-
-
-    unsigned char * neuronimgData = &image[0];
-
-
-    // Create one OpenGL texture
-    glGenTextures(1, &neuronTexID);
-
-
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, neuronTexID);
-
-    // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, neuronimgData);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    filename = "neuron_small.png";
-
-    //load and decode
-    buffer, image;
-    loadFile(buffer, filename);
-
-    error = decodePNG(image, w, h, &buffer[0], (unsigned long)buffer.size());
-    if(error != 0) std::cout << "error: " << error << std::endl;
-
-
-    unsigned char * neuron_smallimgData = &image[0];
-
-
-    // Create one OpenGL texture
-    glGenTextures(1, &neuron_smallTexID);
-
-
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, neuron_smallTexID);
-
-    // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, neuron_smallimgData);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-}
-
-bool NeuCor_Renderer::selectNeuron(int id, bool windowOpen){
+/*bool NeuCor_Renderer::selectNeuron(int id, bool windowOpen){
    /* assert(id < brain->neurons.size());
     if (neuronWindows.find(id) == neuronWindows.end()){
         selectedNeurons.push_back(id);
@@ -341,7 +112,7 @@ bool NeuCor_Renderer::selectNeuron(int id, bool windowOpen){
         neuronWindows.at(id).open = windowOpen;
         return false;
     }*/
-}
+/*}
 
 bool NeuCor_Renderer::deselectNeuron(int id){
     /*assert(id < brain->neurons.size());
@@ -360,7 +131,7 @@ bool NeuCor_Renderer::deselectNeuron(int id){
     else {
         return false;
     }*/
-}
+//}
 
 void NeuCor_Renderer::updateView(){
     #define PRINT_CONNECTIONS_EVERY_FRAME false
@@ -370,72 +141,13 @@ void NeuCor_Renderer::updateView(){
     double currentTime = now.tv_sec*1000000000LL + now.tv_nsec;
 
     /*glClearColor((float)rand()/RAND_MAX,(float) rand()/RAND_MAX,(float) rand()/RAND_MAX, 0.f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    */
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);*/
+
 
     deltaTime = float(currentTime - lastTime);
     lastTime = currentTime;
     FPS = (FPS*20.0+1.0/deltaTime)/21.0; // Makes FPS change slower
     float aspect = (float) width / (float)height;
-
-    static bool once = true;
-    static float points[] = {
-            0.0f,  0.5f,  0.0f,
-            0.5f, -0.5f,  0.0f,
-            -0.5f, -0.5f,  0.0f
-    };
-    static GLuint vbo = 0;
-    static GLuint vao = 0;
-    static GLuint vs;
-    static GLuint fs;
-    static GLuint shader_programme;
-    if (once){
-        once = false;
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), points, GL_STATIC_DRAW);
-
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-        const char* vertex_shader =
-                "#version 400\n"
-                        "in vec3 vp;"
-                        "void main() {"
-                        "  gl_Position = vec4(vp, 1.0);"
-                        "}";
-
-        const char* fragment_shader =
-                "#version 400\n"
-                        "out vec4 frag_colour;"
-                        "void main() {"
-                        "  frag_colour = vec4(0.5, 0.0, 0.5, 1.0);"
-                        "}";
-
-
-        vs = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vs, 1, &vertex_shader, NULL);
-        glCompileShader(vs);
-        fs = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fs, 1, &fragment_shader, NULL);
-        glCompileShader(fs);
-
-        shader_programme = glCreateProgram();
-        glAttachShader(shader_programme, fs);
-        glAttachShader(shader_programme, vs);
-        glLinkProgram(shader_programme);
-    }
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(shader_programme);
-    glBindVertexArray(vao);
-    // draw points 0-3 from the currently bound VAO with current in-use shader
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    return;
 
     if (runBrainOnUpdate && realRunspeed && !paused) {
         float staticRunSpeed = brain->runSpeed;
@@ -445,60 +157,7 @@ void NeuCor_Renderer::updateView(){
     }
     else if (runBrainOnUpdate && !paused) brain->run();
 
-
     updateCamPos();
-
-    if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount = 0;
-
-    closenessValues.resize(brain->neurons.size(), 0);
-    std::vector<coord3> connections;
-    std::vector<float> synPot;
-    synPot.reserve(brain->neurons.size() * 8.0);
-    for (auto &neu : brain->neurons) {
-        for (auto &syn : neu.outSynapses) {
-
-            connections.push_back(brain->getNeuron(syn.pN)->position());
-            if (connections.back().x != connections.back().x) { // For debugging
-                std::cout << "NaN coord!\n";
-            }
-            connections.push_back(brain->getNeuron(syn.tN)->position());
-            if (connections.back().x != connections.back().x) { // For debugging
-                std::cout << "NaN coord!\n";
-            }
-            if (PRINT_CONNECTIONS_EVERY_FRAME)
-                std::cout << syn.pN << " " << connections.at(connections.size() - 2).x <<
-                " -> " << syn.tN << " " << connections.back().x << " | ";
-
-
-            if (renderMode == RENDER_VOLTAGE) {
-                synPot.push_back(syn.getPrePot() + 0.03);
-                synPot.push_back(syn.getPostPot() + 0.03);
-            }
-            else if (renderMode == RENDER_PLASTICITY) {
-                synPot.push_back(syn.getWeight() / 2.0);
-                synPot.push_back(syn.getWeight() / 2.0);
-                if (RENDER_PLASTICITY_onlyActive) {
-                    synPot.at(synPot.size() - 2) *= log(
-                            brain->getNeuron(syn.pN)->activity() + 1.f);
-                    synPot.back() *= log(brain->getNeuron(syn.tN)->activity() + 1.f);
-                }
-
-            }
-            else if (renderMode == RENDER_ACTIVITY) {
-                synPot.push_back(log(brain->getNeuron(syn.pN)->activity() + 1.f));
-                synPot.push_back(log(brain->getNeuron(syn.tN)->activity() + 1.f));
-            }
-            else if (renderMode == RENDER_CLOSENESS) {
-                synPot.push_back(powf(closenessValues.at(syn.pN), closenessIntensity));
-                synPot.push_back(powf(closenessValues.at(syn.tN), closenessIntensity));
-            }
-            else if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount++;
-        }
-    }
-    if (PRINT_CONNECTIONS_EVERY_FRAME) std::cout << std::endl;
-
-    logger.neuronCount = brain->neurons.size();
-    if (renderMode != RENDER_NOSYNAPSES) logger.synapseCount = synPot.size() / 2;
 
     if (renderMode == RENDER_NOSYNAPSES) goto renderNeurons; // Skip rendering synapses
 
@@ -506,7 +165,7 @@ void NeuCor_Renderer::updateView(){
     renderSynapses:
 
     glUseProgram(synapseProgramID);
-
+    /*
     glBindBuffer(GL_ARRAY_BUFFER, synapse_PT_buffer);
     glBufferSubData(GL_ARRAY_BUFFER, 0, connections.size() * sizeof(coord3), NULL);
     glBufferData(GL_ARRAY_BUFFER, connections.size() * sizeof(coord3), &connections[0], GL_DYNAMIC_DRAW);
@@ -514,6 +173,7 @@ void NeuCor_Renderer::updateView(){
     glBindBuffer(GL_ARRAY_BUFFER, synapse_potential_buffer);
     glBufferSubData(GL_ARRAY_BUFFER, 0, synPot.size() * sizeof(GLfloat), NULL);
     glBufferData(GL_ARRAY_BUFFER, synPot.size() * sizeof(GLfloat), &synPot[0], GL_DYNAMIC_DRAW);
+    */
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, synapse_PT_buffer);
@@ -542,9 +202,7 @@ void NeuCor_Renderer::updateView(){
     glUniform1f(aspectID[1], aspect);
     glUniformMatrix4fv(ViewProjMatrixID[1], 1, GL_FALSE, &vp[0][0]);
 
-
-    //glDrawElements(GL_LINES, connections.size()/2, GL_UNSIGNED_INT, (void*)0); <-- Crashes
-    glDrawArrays(GL_LINES, 0, connections.size());
+    //glDrawArrays(GL_LINES, 0, connections.size());
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -641,6 +299,64 @@ void NeuCor_Renderer::updateView(){
     //if (showInterface) renderInterface();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+renderArrays NeuCor_Renderer::getRenderArrays() {
+    if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount = 0;
+
+    closenessValues.resize(brain->neurons.size(), 0);
+    std::vector<coord3>* connections = new std::vector<coord3>;
+    std::vector<float>* synPot = new std::vector<float>;
+    synPot->reserve(brain->neurons.size() * 8.0);
+    for (auto &neu : brain->neurons) {
+        for (auto &syn : neu.outSynapses) {
+
+            connections->push_back(brain->getNeuron(syn.pN)->position());
+            if (connections->back().x != connections->back().x) { // For debugging
+                std::cout << "NaN coord!\n";
+            }
+            connections->push_back(brain->getNeuron(syn.tN)->position());
+            if (connections->back().x != connections->back().x) { // For debugging
+                std::cout << "NaN coord!\n";
+            }
+            if (PRINT_CONNECTIONS_EVERY_FRAME)
+                std::cout << syn.pN << " " << connections->at(connections->size() - 2).x <<
+                " -> " << syn.tN << " " << connections->back().x << " | ";
+
+
+            if (renderMode == RENDER_VOLTAGE) {
+                synPot->push_back(syn.getPrePot() + 0.03);
+                synPot->push_back(syn.getPostPot() + 0.03);
+            }
+            else if (renderMode == RENDER_PLASTICITY) {
+                synPot->push_back(syn.getWeight() / 2.0);
+                synPot->push_back(syn.getWeight() / 2.0);
+                if (RENDER_PLASTICITY_onlyActive) {
+                    synPot->at(synPot->size() - 2) *= log(
+                            brain->getNeuron(syn.pN)->activity() + 1.f);
+                    synPot->back() *= log(brain->getNeuron(syn.tN)->activity() + 1.f);
+                }
+
+            }
+            else if (renderMode == RENDER_ACTIVITY) {
+                synPot->push_back(log(brain->getNeuron(syn.pN)->activity() + 1.f));
+                synPot->push_back(log(brain->getNeuron(syn.tN)->activity() + 1.f));
+            }
+            else if (renderMode == RENDER_CLOSENESS) {
+                synPot->push_back(powf(closenessValues.at(syn.pN), closenessIntensity));
+                synPot->push_back(powf(closenessValues.at(syn.tN), closenessIntensity));
+            }
+            else if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount++;
+        }
+    }
+    if (PRINT_CONNECTIONS_EVERY_FRAME) std::cout << std::endl;
+    logger.neuronCount = brain->neurons.size();
+    if (renderMode != RENDER_NOSYNAPSES) logger.synapseCount = synPot->size() / 2;
+
+    renderArrays rA;
+    rA.syn_connections = connections;
+    rA.syn_potential = synPot;
+    return rA;
 }
 
 void NeuCor_Renderer::pollWindow(){

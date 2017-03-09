@@ -11,9 +11,9 @@ public class LibJNIWrapper {
         System.loadLibrary("native-lib");
     }
 
-    public static native void on_surface_created(AssetManager assetManager);
+    public static native void init();
 
-    public static native void on_surface_changed(int width, int height);
+    public static native void runBrain();
 
-    public static native void on_draw_frame();
+    public static native void getRenderData();
 }

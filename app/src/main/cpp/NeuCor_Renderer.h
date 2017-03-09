@@ -16,9 +16,14 @@
 #include "glm/glm.hpp"
 using namespace glm;
 
+struct renderArrays {
+    std::vector<coord3>* syn_connections;
+    std::vector<float>* syn_potential;
+};
+
 class NeuCor_Renderer {
     public:
-        NeuCor_Renderer(NeuCor* _brain, AAssetManager* assetManager);
+        NeuCor_Renderer(NeuCor* _brain);
         ~NeuCor_Renderer();
 
         float getDeltaTime();
@@ -27,6 +32,8 @@ class NeuCor_Renderer {
         bool paused;
         bool selectNeuron(int id, bool windowOpen);
         bool deselectNeuron(int id);
+
+        renderArrays getRenderArrays();
 
         enum cameraModes{ CAMERA_MOUSE_LOOK, CAMERA_ORBIT, CAMERA_ORBIT_MOMENTUM, CAMERA_count};
         std::vector<std::string> cameraModeNames = {"Mouse look", "Orbit", "Orbit momentum"};
@@ -109,7 +116,6 @@ class NeuCor_Renderer {
         float deltaTime;
         float FPS;
         void initOpenGL();
-        void loadResources();
         inline glm::vec3 screenCoordinates(glm::vec3 worldPos, bool nomalizedZ = false);
 };
 
