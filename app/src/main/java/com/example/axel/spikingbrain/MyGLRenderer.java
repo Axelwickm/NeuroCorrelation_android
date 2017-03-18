@@ -25,6 +25,10 @@ import android.util.Log;
 
 import com.example.axel.spikingbrain.Triangle;
 
+import static com.example.axel.spikingbrain.LibJNIWrapper.getPotentials;
+import static com.example.axel.spikingbrain.LibJNIWrapper.getRenderData;
+import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
+
 /**
  * Provides drawing instructions for a GLSurfaceView object. This class
  * must override the OpenGL ES drawing lifecycle methods:
@@ -69,8 +73,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // Calculate the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
 
-        mTriangle.draw(mMVPMatrix);
-
         // Create a rotation for the triangle
 
         // Use the following code to generate constant rotation.
@@ -85,8 +87,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // for the matrix multiplication product to be correct.
         Matrix.multiplyMM(scratch, 0, mMVPMatrix, 0, mRotationMatrix, 0);
 
-        // Draw triangle
-        mTriangle.draw(scratch);
+        mTriangle.draw(mMVPMatrix);
+
+        getRenderData();
+        float[] connections = getSynConnections();
+        float[] potentials = getPotentials();
     }
 
     @Override

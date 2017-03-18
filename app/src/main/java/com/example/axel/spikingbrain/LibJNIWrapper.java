@@ -16,4 +16,8 @@ public class LibJNIWrapper {
     public static native void runBrain();
 
     public static native void getRenderData();
+
+    public static native float[] getSynConnections();
+
+    public static native float[] getPotentials();
 }
