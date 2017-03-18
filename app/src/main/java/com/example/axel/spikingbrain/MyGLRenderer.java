@@ -18,16 +18,13 @@ package com.example.axel.spikingbrain;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 
 import com.example.axel.spikingbrain.Triangle;
-
-import static com.example.axel.spikingbrain.LibJNIWrapper.getPotentials;
-import static com.example.axel.spikingbrain.LibJNIWrapper.getRenderData;
-import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
 
 /**
  * Provides drawing instructions for a GLSurfaceView object. This class
@@ -41,7 +38,9 @@ import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
 public class MyGLRenderer implements GLSurfaceView.Renderer {
 
     private static final String TAG = "MyGLRenderer";
+    private Context context;
     private Triangle mTriangle;
+    private BrainDrawer mBrain;
 
     // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
     private final float[] mMVPMatrix = new float[16];
@@ -51,6 +50,10 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
     private float mAngle;
 
+    MyGLRenderer (Context context){
+        this.context = context;
+    }
+
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
 
@@ -58,6 +61,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         mTriangle = new Triangle();
+
+        mBrain = new BrainDrawer(context);
     }
 
     @Override
@@ -87,11 +92,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // for the matrix multiplication product to be correct.
         Matrix.multiplyMM(scratch, 0, mMVPMatrix, 0, mRotationMatrix, 0);
 
-        mTriangle.draw(mMVPMatrix);
-
-        getRenderData();
-        float[] connections = getSynConnections();
-        float[] potentials = getPotentials();
+        //mBrain.draw(mMVPMatrix);
     }
 
     @Override

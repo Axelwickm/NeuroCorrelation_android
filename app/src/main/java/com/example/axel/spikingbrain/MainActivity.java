@@ -1,5 +1,7 @@
 package com.example.axel.spikingbrain;
 
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.opengl.GLSurfaceView;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -25,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
         glSurfaceView = new GLSurfaceView(this);
 
         glSurfaceView.setEGLContextClientVersion(3);
-        glSurfaceView.setRenderer(new MyGLRenderer());
+        glSurfaceView.setRenderer(new MyGLRenderer(getBaseContext()));
         glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         rendererSet = true;
         setContentView(glSurfaceView);
