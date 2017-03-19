@@ -21,5 +21,7 @@ public class LibJNIWrapper {
 
     public static native float[] getSynConnections();
 
-    public static native float[] getPotentials();
+    public static native float[] getSynPotentials();
+
+    public static native void clearRenderData();
 }

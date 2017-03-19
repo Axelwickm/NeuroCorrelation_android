@@ -27,6 +27,7 @@ import android.util.Log;
 import com.example.axel.spikingbrain.Triangle;
 
 import static com.example.axel.spikingbrain.LibJNIWrapper.getMVPMatrix;
+import static com.example.axel.spikingbrain.LibJNIWrapper.runBrain;
 
 /**
  * Provides drawing instructions for a GLSurfaceView object. This class
@@ -61,6 +62,10 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+        // Tillåter transparans
+        GLES30.glEnable(GLES30.GL_BLEND);
+        GLES30.glBlendFunc(GLES30.GL_SRC_ALPHA, GLES30.GL_ONE_MINUS_SRC_ALPHA);
+
         //mTriangle = new Triangle();
 
         mBrain = new BrainDrawer(context);
@@ -71,12 +76,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // Draw background color
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
 
-
         mMVPMatrix = getMVPMatrix(ratio);
-        Log.i("Matrix", ""+mMVPMatrix[15]);
 
         //mTriangle.draw(mMVPMatrix);
         mBrain.draw(mMVPMatrix);
+
+        runBrain();
     }
 
     @Override

@@ -15,18 +15,21 @@
  */
 package com.example.axel.spikingbrain;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import android.content.Context;
 import android.opengl.GLES30;
+import android.util.Log;
 
-import com.example.axel.spikingbrain.MyGLRenderer;
-
-import static com.example.axel.spikingbrain.LibJNIWrapper.getPotentials;
+import static com.example.axel.spikingbrain.LibJNIWrapper.clearRenderData;
 import static com.example.axel.spikingbrain.LibJNIWrapper.getRenderData;
 import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
+import static com.example.axel.spikingbrain.LibJNIWrapper.getSynPotentials;
+import static com.example.axel.spikingbrain.MyGLRenderer.checkGlError;
 
 /**
  * A two-dimensional triangle for use as a drawn object in OpenGL ES 2.0.
@@ -34,32 +37,11 @@ import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
 public class BrainDrawer {
     private Context context;
 
-    private final String vertexShaderCode =
-            // This matrix member variable provides a hook to manipulate
-            // the coordinates of the objects that use this vertex shader
-            "#version 300 es \n" +
-                    "uniform mat4 uMVPMatrix;" +
-                    "in vec4 vPosition;" +
-                    "void main() {" +
-                    // the matrix must be included as a modifier of gl_Position
-                    // Note that the uMVPMatrix factor *must be first* in order
-                    // for the matrix multiplication product to be correct.
-                    "  gl_Position = uMVPMatrix * vPosition;" +
-                    "}";
-
-    private final String fragmentShaderCode =
-            "#version 300 es \n" +
-                    "precision mediump float;" +
-                    "uniform vec4 vColor;" +
-                    "out vec4 color;" +
-                    "void main() {" +
-                    "  color = vColor;" +
-                    "}";
-
-    private final FloatBuffer vertexBuffer;
-    private final int mProgram;
+    private FloatBuffer synPosBuffer;
+    private FloatBuffer synPotBuffer;
+    private final int mSynapseProgram;
     private int mPositionHandle;
-    private int mColorHandle;
+    private int mPotentialHandle;
     private int mMVPMatrixHandle;
 
     // number of coordinates per vertex in this array
@@ -70,60 +52,48 @@ public class BrainDrawer {
 
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
 
-    /**
-     * Sets up the drawing object data for use in an OpenGL ES context.
-     */
     public BrainDrawer(Context context) {
         // Sparar context
         this.context = context;
 
         getRenderData();
-        float[] connections = getSynConnections();
-        float[] potentials = getPotentials();
+        updatePosBuffer(); // Hämtar positions-array endast en gång, då neuronernas position ej förändras
+        clearRenderData();
 
-        vertexCount = connections.length / COORDS_PER_VERTEX;
-
-        // initialize vertex byte buffer for shape coordinates
-        ByteBuffer bb = ByteBuffer.allocateDirect(
-                // (number of coordinate values * 4 bytes per float)
-                connections.length * 4);
-        // use the device hardware's native byte order
-        bb.order(ByteOrder.nativeOrder());
-
-        // create a floating point buffer from the ByteBuffer
-        vertexBuffer = bb.asFloatBuffer();
-        // add the coordinates to the FloatBuffer
-        vertexBuffer.put(connections);
-        // set the buffer to read the first coordinate
-        vertexBuffer.position(0);
+        String vertexShaderCode = readFileAsString("synapse.shader");
+        String fragmentShaderCode = readFileAsString("synapse.Fshader");
 
         // prepare shaders and OpenGL program
         int vertexShader = MyGLRenderer.loadShader(
                 GLES30.GL_VERTEX_SHADER, vertexShaderCode);
+        checkGlError("Load synapse vertex shader");
         int fragmentShader = MyGLRenderer.loadShader(
                 GLES30.GL_FRAGMENT_SHADER, fragmentShaderCode);
+        checkGlError("Load synapse fragment shader");
 
-        mProgram = GLES30.glCreateProgram();             // create empty OpenGL Program
-        GLES30.glAttachShader(mProgram, vertexShader);   // add the vertex shader to program
-        GLES30.glAttachShader(mProgram, fragmentShader); // add the fragment shader to program
-        GLES30.glLinkProgram(mProgram);                  // create OpenGL program executables
+        mSynapseProgram = GLES30.glCreateProgram();             // create empty OpenGL Program
+        checkGlError("Create program");
+        GLES30.glAttachShader(mSynapseProgram, vertexShader);   // add the vertex shader to program
+        checkGlError("Attach synapse vertex shader");
+        GLES30.glAttachShader(mSynapseProgram, fragmentShader); // add the fragment shader to program
+        checkGlError("Attach synapse fragment shader");
+        GLES30.glLinkProgram(mSynapseProgram);                  // create OpenGL program executables
+        checkGlError("Link synapse Program");              // create OpenGL program executables
 
     }
 
-    /**
-     * Encapsulates the OpenGL ES instructions for drawing this shape.
-     *
-     * @param mvpMatrix - The Model View Project matrix in which to draw
-     * this shape.
-     */
     public void draw(float[] mvpMatrix) {
+        getRenderData();
+        updatePotBuffer(); // Hämtar synapsernas spännings-array
+        clearRenderData();
+
         // Ändra linjetjockleken
         GLES30.glLineWidth(2.5f);
         // Add program to OpenGL environment
-        GLES30.glUseProgram(mProgram);
+        GLES30.glUseProgram(mSynapseProgram);
 
         // get handle to vertex shader's vPosition member
-        mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition");
+        mPositionHandle = GLES30.glGetAttribLocation(mSynapseProgram, "vPosition");
 
         // Enable a handle to the triangle vertices
         GLES30.glEnableVertexAttribArray(mPositionHandle);
@@ -132,27 +102,81 @@ public class BrainDrawer {
         GLES30.glVertexAttribPointer(
                 mPositionHandle, COORDS_PER_VERTEX,
                 GLES30.GL_FLOAT, false,
-                vertexStride, vertexBuffer);
+                vertexStride, synPosBuffer);
 
-        // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vColor");
 
-        // Set color for drawing the triangle
-        GLES30.glUniform4fv(mColorHandle, 1, color, 0);
+        // get handle to vertex shader's vPosition member
+        mPotentialHandle = GLES30.glGetAttribLocation(mSynapseProgram, "vPotential");
+
+        // Enable a handle to the triangle vertices
+        GLES30.glEnableVertexAttribArray(mPotentialHandle);
+
+        // Prepare the triangle coordinate data
+        GLES30.glVertexAttribPointer(
+                mPotentialHandle, 1,
+                GLES30.GL_FLOAT, false,
+                4, synPotBuffer);
 
         // get handle to shape's transformation matrix
-        mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
-        MyGLRenderer.checkGlError("glGetUniformLocation");
+        mMVPMatrixHandle = GLES30.glGetUniformLocation(mSynapseProgram, "uMVPMatrix");
+        checkGlError("glGetUniformLocation");
 
         // Apply the projection and view transformation
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
-        MyGLRenderer.checkGlError("glUniformMatrix4fv");
+        checkGlError("glUniformMatrix4fv");
 
         // Draw the triangle
         GLES30.glDrawArrays(GLES30.GL_LINES, 0, vertexCount);
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle);
+        GLES30.glDisableVertexAttribArray(mPotentialHandle);
+    }
+
+    private void updatePosBuffer(){
+        float[] connections = getSynConnections();
+
+        vertexCount = connections.length / COORDS_PER_VERTEX;
+
+        ByteBuffer bb = ByteBuffer.allocateDirect(connections.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+
+        synPosBuffer = bb.asFloatBuffer();
+        synPosBuffer.put(connections);
+        synPosBuffer.position(0);
+    }
+
+    private void updatePotBuffer(){
+        float[] potentials = getSynPotentials();
+
+        ByteBuffer bb = ByteBuffer.allocateDirect(potentials.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+
+        synPotBuffer = bb.asFloatBuffer();
+        synPotBuffer.put(potentials);
+        synPotBuffer.position(0);
+    }
+
+    private String readFileAsString(String filePath) {
+        InputStream input;
+        String text = "";
+
+        try {
+            input = context.getAssets().open(filePath);
+
+            int size = input.available();
+            byte[] buffer = new byte[size];
+            input.read(buffer);
+            input.close();
+
+            // byte buffer into a string
+            text = new String(buffer);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return text;
     }
 
 }

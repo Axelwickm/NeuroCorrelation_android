@@ -8,12 +8,20 @@
 
 std::unique_ptr<NeuCor> brain;
 std::unique_ptr<NeuCor_Renderer> renderer;
+
 renderArrays rA;
+
+float inputs[] = {200.f};
 
 extern "C"
 JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_init
         (JNIEnv * env, jclass cls) {
     brain = std::unique_ptr<NeuCor>(new NeuCor(250));
+    brain->runSpeed = 0.1;
+    brain->runAll = true;
+
+    brain->setInputRateArray(inputs, sizeof(inputs)/sizeof(float));
+
     renderer = std::unique_ptr<NeuCor_Renderer>(new NeuCor_Renderer(brain.get()));
 }
 
@@ -43,8 +51,6 @@ JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getRende
     jfloatArray syn_connections;
     syn_connections = env->NewFloatArray(rA.syn_connections->size()*3);
     env->SetFloatArrayRegion(syn_connections, 0, rA.syn_connections->size()*3, (float*) &rA.syn_connections->at(0));
-
-    //__android_log_print(ANDROID_LOG_INFO,"hejhej","%d", env->GetFloatArrayElements(syn_connections, 0));
 }
 
 extern "C"
@@ -55,20 +61,25 @@ JNIEXPORT jfloatArray JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_g
     syn_connections = (*env).NewFloatArray(rA.syn_connections->size()*3);
     (*env).SetFloatArrayRegion(syn_connections, 0, rA.syn_connections->size()*3, (float*) &rA.syn_connections->at(0));
 
-    delete rA.syn_connections;
-
     return syn_connections;
 }
 
 extern "C"
-JNIEXPORT jfloatArray JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getPotentials
+JNIEXPORT jfloatArray JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getSynPotentials
         (JNIEnv * env, jclass cls) {
 
     jfloatArray syn_potential;
     syn_potential = (*env).NewFloatArray(rA.syn_potential->size());
     (*env).SetFloatArrayRegion(syn_potential, 0, rA.syn_potential->size(), &rA.syn_potential->at(0));
 
+    return  syn_potential;
+}
+extern "C"
+JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_clearRenderData
+        (JNIEnv * env, jclass cls) {
+    delete rA.syn_connections;
     delete rA.syn_potential;
 
-    return  syn_potential;
+    rA.syn_connections = NULL; // Deleting NULL-pointer is safe, incase clearRenderData gets clalled multiple times
+    rA.syn_potential = NULL;
 }

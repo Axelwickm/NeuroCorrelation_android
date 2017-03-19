@@ -1,13 +1,10 @@
 #version 300 es
 
-out vec4 f_color;
-
-//in float opacity;
-
-void main(){
-  /*if (0.0 < opacity)
-    f_color = vec4(0.45, 0.3, 0.45, opacity);
+in float potential;
+out vec4 color;
+void main() {
+  if (0.0 < potential)
+    color = vec4(0.45, 0.3, 0.45, potential);
   else
-    f_color = vec4(0.05, 0.05, 0.3, -opacity);*/
-  //f_color = vec4(1.0, 0.5, 0.0, 0.5);
+    color = vec4(0.05, 0.05, 0.3, -potential);
 }
