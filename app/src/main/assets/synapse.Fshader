@@ -2,13 +2,13 @@
 
 in float opacity;
 
-out vec4 color;
+uniform mat4 uMVPMatrix;
+
+out vec4 f_color;
 
 void main(){
   if (0.0 < opacity)
-    color = vec4(0.45, 0.3, 0.45, opacity);
-
+    f_color = vec4(0.45, 0.3, 0.45, opacity);
   else
-    color = vec4(0.05, 0.05, 0.3, -opacity);
-
+    f_color = vec4(0.05, 0.05, 0.3, -opacity);
 }

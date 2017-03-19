@@ -1,20 +1,20 @@
 #version 300 es
 
-layout(location = 0) in vec3 xyz;
-layout(location = 1) in float pot;
+in vec4 vPosition;
+in float vPotential;
 
-uniform mat4 VP;
-uniform float aspect;
+uniform mat4 uMVPMatrix;
 
 out float opacity;
 
 void main(){
     //Don't render if neuron position is NaN (which happens when it is deleted.)
-	if (isnan(xyz.x)){
+	if (isnan(vPosition.x)){
         return;
 	}
 
-	gl_Position = VP * vec4(xyz, 1.0);
+	gl_Position = uMVPMatrix * vPosition;
+	gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
 
-    opacity = pot;
+    opacity = vPotential;
 }
