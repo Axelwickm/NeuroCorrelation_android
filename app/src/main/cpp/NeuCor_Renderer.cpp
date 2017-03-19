@@ -18,6 +18,7 @@ using namespace glm;
 #include "glm/gtx/transform.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <GLES3/gl3.h>
+#include <gtc/type_ptr.inl>
 
 
 NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
@@ -36,8 +37,9 @@ NeuCor_Renderer::NeuCor_Renderer(NeuCor* _brain)
     height = ANativeWindow_getHeight(window);*/
     width = 500;
     height = 500;
+    cameraRadius = 8.0f;
 
-    cameraMode = cameraModes::CAMERA_ORBIT;
+    cameraMode = cameraModes::CAMERA_ORBIT_MOMENTUM;
     renderMode = renderingModes::RENDER_VOLTAGE;
 
     FPS = 0;
@@ -301,6 +303,58 @@ void NeuCor_Renderer::updateView(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+std::vector<float> NeuCor_Renderer::getMVPmatrix(float ratio) {
+    float deltaX = 0.0; //cursorX-xpos;
+    float deltaY = 0.0; //cursorY-ypos;
+    deltaTime = 0.01;
+    static glm::vec2 momentum(0.05, 0.1);
+
+    glm::vec2 cameraPan(0.0, 0.0);
+    /*if (ImGui::IsMouseDragging(0, 0) && navigationMode){
+        cameraPan = glm::vec2(-deltaX, deltaY)/50.f;
+    }*/
+
+    if (cameraMode == CAMERA_ORBIT_MOMENTUM){
+        if (navigationMode) momentum += glm::vec2(deltaX, -deltaY) * deltaTime / 100.f;
+        camHA += momentum.x*deltaTime;
+        camVA += momentum.y*deltaTime;
+    }
+    else {
+        camHA -= 0.15 * deltaTime * deltaX;
+        camVA  += 0.15 * deltaTime * deltaY;
+        momentum = glm::vec2(0.0, 0.0);
+    }
+
+    glm::vec3 focusPoint(0.0, 0.0, 0.0);
+
+    camPos = focusPoint + glm::vec3(cos(camHA) * cos(camVA), sin(camVA), -sin(camHA) * cos(camVA)) * cameraRadius;
+    camUp =  glm::normalize(
+            glm::vec3(cos(camHA) * cos(camVA + 1.570796f),
+                      sin(camVA + 1.570796f),
+                      -sin(camHA) * cos(camVA + 1.570796f))
+    );
+    glm::mat4 Projection = glm::perspective(glm::radians(65.0f), (float) ratio, 0.05f, 100.0f);
+    glm::mat4 View = glm::lookAt(
+            camPos,
+            focusPoint,
+            camUp
+    );
+    //focusPoint += glm::vec3( glm::vec4(cameraPan, 0.0, 0.0) * View );
+
+    vp = Projection * View; // Caluclate matrix
+
+    /*__android_log_print(ANDROID_LOG_VERBOSE, "DDD Vec CamPos C++", "%f", camPos[0]);
+    __android_log_print(ANDROID_LOG_VERBOSE, "DDD Vec focusPoint C++", "%f", focusPoint[0]);
+    __android_log_print(ANDROID_LOG_VERBOSE, "DDD Vec camUp C++", "%f", camUp[0]);
+    __android_log_print(ANDROID_LOG_VERBOSE, "DDD Vec Camera radius C++", "%f", cameraRadius);*/
+    // Turn it into vector
+    std::vector<float> MVPMatrix;
+    MVPMatrix.resize(16, 0);
+    const float *pSource = (const float*)glm::value_ptr(vp);
+    for (int i = 0; i<16; i++) MVPMatrix[i] = pSource[i];
+    return MVPMatrix;
+}
+
 renderArrays NeuCor_Renderer::getRenderArrays() {
     if (renderMode == RENDER_NOSYNAPSES) logger.synapseCount = 0;
 
@@ -359,20 +413,6 @@ renderArrays NeuCor_Renderer::getRenderArrays() {
     return rA;
 }
 
-void NeuCor_Renderer::pollWindow(){
-   /* glfwPollEvents();
-
-    int temp_width, temp_height;
-    glfwGetWindowSize(window, &temp_width, &temp_height);
-    if (temp_width != width || temp_height != height){
-        width = temp_width;
-        height = temp_height;
-        glViewport(0, 0, width, height);
-    }
-    if (glfwWindowShouldClose(window)){
-        delete this;
-    }*/
-}
 void NeuCor_Renderer::setDestructCallback(CallbackType callbackF){
     destructCallback = callbackF;
 }
@@ -391,6 +431,7 @@ void NeuCor_Renderer::updateCamPos(){
     if (cameraMode == CAMERA_MOUSE_LOOK){
         float deltaX = cursorX-xpos;
         float deltaY = cursorY-ypos;
+        deltaX = 0; deltaY = 0; deltaTime = 0;
         camHA += 0.1;
         camVA += 0.5;
 
@@ -479,36 +520,6 @@ void NeuCor_Renderer::updateCamPos(){
     }
     cursorX = xpos; cursorY = ypos;
 };
-/*
-void NeuCor_Renderer::updateSignalSpread(){
-    std::fill(closenessValues.begin(), closenessValues.end(), INFINITY);
-    std::vector<std::size_t> toCheck;
-    toCheck.reserve(logger.synapseCount/5);
-    for (auto neuID: selectedNeurons){
-        closenessValues.at(neuID) = 0.0;
-        toCheck.push_back(neuID);
-    }
-    float maxDegree = 0;
-    while (!toCheck.empty()){
-        int current = toCheck.back();
-        toCheck.pop_back();
-        for (auto &outSyn: brain->getNeuron(current)->outSynapses){
-            if (0.0 > outSyn.getWeight()) continue;
-            float newDegree = closenessValues.at(current) + 1.0/outSyn.getWeight();
-            if (newDegree < closenessValues.at(outSyn.tN)){
-                toCheck.push_back(outSyn.tN);
-                closenessValues.at(outSyn.tN) = newDegree;
-            }
-        }
-    }
-    for (auto &neu: closenessValues)
-        if (maxDegree < neu)
-            maxDegree = neu;
-    maxDegree = 6;
-    for (auto &neu: closenessValues)
-        neu = fmax(0, 1.0 - neu/maxDegree);
-}
-*/
 
 inline glm::vec3 NeuCor_Renderer::screenCoordinates(glm::vec3 worldPos, bool nomalizedZ){
     glm::vec4 posClip = vp * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.0f );

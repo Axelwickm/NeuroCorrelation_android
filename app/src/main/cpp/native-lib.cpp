@@ -24,6 +24,18 @@ JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_runBrain
 }
 
 extern "C"
+JNIEXPORT jfloatArray JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getMVPMatrix
+        (JNIEnv * env, jclass cls, jfloat ratio) {
+
+    std::vector<float> vector_MVPMatrix = renderer->getMVPmatrix(ratio);
+
+    jfloatArray MVPMatrix = env->NewFloatArray(16);
+    env->SetFloatArrayRegion(MVPMatrix, 0, 16, vector_MVPMatrix.data());
+
+    return MVPMatrix;
+}
+
+extern "C"
 JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getRenderData
         (JNIEnv * env, jclass cls) {
     rA = renderer->getRenderArrays();

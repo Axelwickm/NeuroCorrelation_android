@@ -33,6 +33,7 @@ class NeuCor_Renderer {
         bool selectNeuron(int id, bool windowOpen);
         bool deselectNeuron(int id);
 
+        std::vector<float> getMVPmatrix(float ratio);
         renderArrays getRenderArrays();
 
         enum cameraModes{ CAMERA_MOUSE_LOOK, CAMERA_ORBIT, CAMERA_ORBIT_MOMENTUM, CAMERA_count};

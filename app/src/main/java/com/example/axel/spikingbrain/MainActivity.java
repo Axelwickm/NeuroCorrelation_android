@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
         glSurfaceView.setEGLContextClientVersion(3);
         glSurfaceView.setRenderer(new MyGLRenderer(getBaseContext()));
-        glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        //glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         rendererSet = true;
         setContentView(glSurfaceView);
 
