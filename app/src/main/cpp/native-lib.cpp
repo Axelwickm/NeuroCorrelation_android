@@ -11,12 +11,12 @@ std::unique_ptr<NeuCor_Renderer> renderer;
 
 renderArrays rA;
 
-float inputs[] = {200.f};
+float inputs[] = {150.f};
 
 extern "C"
 JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_init
         (JNIEnv * env, jclass cls) {
-    brain = std::unique_ptr<NeuCor>(new NeuCor(250));
+    brain = std::unique_ptr<NeuCor>(new NeuCor(300));
     brain->runSpeed = 0.1;
     brain->runAll = true;
 

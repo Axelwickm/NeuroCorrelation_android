@@ -227,6 +227,7 @@ deletedSimulator::deletedSimulator(NeuCor* p): simulator(p) {};
 
 InputFirer::InputFirer(NeuCor* p, coord3 position)
 :simulator(p) {
+    lastFire = 0.0f;
     if (position.x == position.x) a = position; // If x isn't NAN
     else a = {(float) rand()/RAND_MAX,(float) rand()/RAND_MAX,(float) rand()/RAND_MAX};
 
