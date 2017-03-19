@@ -1,35 +1,28 @@
 package com.example.axel.spikingbrain;
 
-import android.content.Context;
-import android.content.res.AssetManager;
 import android.opengl.GLSurfaceView;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.TextView;
-
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
+import android.support.v7.app.AppCompatActivity;
 
 import static com.example.axel.spikingbrain.LibJNIWrapper.init;
 
 public class MainActivity extends AppCompatActivity {
-    GLSurfaceView glSurfaceView;
-    private boolean rendererSet;
+    GLSurfaceView glSurfaceView; // Surface view som OpenGl använder
+    private boolean rendererSet; // Ser till att inte göra nått dumt om inte renderaren är fixad än
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Initerar LibJNIWrapper
         init();
 
         glSurfaceView = new GLSurfaceView(this);
 
-        glSurfaceView.setEGLContextClientVersion(3);
-        glSurfaceView.setRenderer(new MyGLRenderer(getBaseContext()));
-        //glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-        rendererSet = true;
+        glSurfaceView.setEGLContextClientVersion(3); // Använd OpenGL 3
+        glSurfaceView.setRenderer(new MyGLRenderer(getBaseContext())); // Sätter renderar-klassen som renderare
+        rendererSet = true; // Nu är det inte dumt att använda renderaren längre
         setContentView(glSurfaceView);
 
     }
@@ -39,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
 
         if (rendererSet) {
-            glSurfaceView.onPause();
+            glSurfaceView.onPause(); // Pausar
         }
     }
 
@@ -48,13 +41,8 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         if (rendererSet) {
-            glSurfaceView.onResume();
+            glSurfaceView.onResume(); // Unpausar
         }
-    }
-
-    // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("native-lib");
     }
 }
 

@@ -1,6 +1,4 @@
 #include <jni.h>
-#include <android/asset_manager_jni.h>
-#include <android/log.h>
 #include <string>
 
 #include "NeuCor.h"

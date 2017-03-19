@@ -1,19 +1,7 @@
-/*
- * Copyright (C) 2011 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.example.axel.spikingbrain;
+
+import android.content.Context;
+import android.opengl.GLES30;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,36 +9,30 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-import android.content.Context;
-import android.opengl.GLES30;
-import android.util.Log;
-
 import static com.example.axel.spikingbrain.LibJNIWrapper.clearRenderData;
 import static com.example.axel.spikingbrain.LibJNIWrapper.getRenderData;
 import static com.example.axel.spikingbrain.LibJNIWrapper.getSynConnections;
 import static com.example.axel.spikingbrain.LibJNIWrapper.getSynPotentials;
 import static com.example.axel.spikingbrain.MyGLRenderer.checkGlError;
 
-/**
- * A two-dimensional triangle for use as a drawn object in OpenGL ES 2.0.
- */
+// Pratar med LibJNIWrapper för att visa en rendering av hjärnan
 public class BrainDrawer {
-    private Context context;
-
-    private FloatBuffer synPosBuffer;
-    private FloatBuffer synPotBuffer;
+    // Antal koordinater per hörn (synaps-ändar)
+    static final int COORDS_PER_VERTEX = 3;
+    // Handles till shader-programmet,  GLSL-attributerna (koordinater och potentialer), samt en uniform till MVP-matrisen
     private final int mSynapseProgram;
+    private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per hörn
+    // Context behövs för att använda AssetManager
+    private Context context;
+    // FloatBuffrar som kommer ihåg synapsernas start och stop koordinater
+    private FloatBuffer synPosBuffer;
+    // ... och deras elektriska potentialer
+    private FloatBuffer synPotBuffer;
     private int mPositionHandle;
     private int mPotentialHandle;
     private int mMVPMatrixHandle;
-
-    // number of coordinates per vertex in this array
-    static final int COORDS_PER_VERTEX = 3;
-
+    // Antal hörn
     private int vertexCount;
-    private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
-
-    float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
 
     public BrainDrawer(Context context) {
         // Sparar context
@@ -60,24 +42,23 @@ public class BrainDrawer {
         updatePosBuffer(); // Hämtar positions-array endast en gång, då neuronernas position ej förändras
         clearRenderData();
 
+        // Laddar in shader-kod från filer i Assets
         String vertexShaderCode = readFileAsString("synapse.shader");
         String fragmentShaderCode = readFileAsString("synapse.Fshader");
 
-        // prepare shaders and OpenGL program
-        int vertexShader = MyGLRenderer.loadShader(
-                GLES30.GL_VERTEX_SHADER, vertexShaderCode);
-        checkGlError("Load synapse vertex shader");
-        int fragmentShader = MyGLRenderer.loadShader(
-                GLES30.GL_FRAGMENT_SHADER, fragmentShaderCode);
+        // Skapar shaders
+        int vertexShader = MyGLRenderer.loadShader(GLES30.GL_VERTEX_SHADER, vertexShaderCode);
+        checkGlError("Load synapse vertex shader"); // Loggar eventuella fel
+        int fragmentShader = MyGLRenderer.loadShader(GLES30.GL_FRAGMENT_SHADER, fragmentShaderCode);
         checkGlError("Load synapse fragment shader");
 
-        mSynapseProgram = GLES30.glCreateProgram();             // create empty OpenGL Program
+        mSynapseProgram = GLES30.glCreateProgram();             // Skapar tomt OpenGL Program
         checkGlError("Create program");
-        GLES30.glAttachShader(mSynapseProgram, vertexShader);   // add the vertex shader to program
+        GLES30.glAttachShader(mSynapseProgram, vertexShader);   // Lägg till vertex shader
         checkGlError("Attach synapse vertex shader");
-        GLES30.glAttachShader(mSynapseProgram, fragmentShader); // add the fragment shader to program
+        GLES30.glAttachShader(mSynapseProgram, fragmentShader); // Lägg till fragment shader
         checkGlError("Attach synapse fragment shader");
-        GLES30.glLinkProgram(mSynapseProgram);                  // create OpenGL program executables
+        GLES30.glLinkProgram(mSynapseProgram);                  // Länkar programmet
         checkGlError("Link synapse Program");              // create OpenGL program executables
 
     }
@@ -89,63 +70,65 @@ public class BrainDrawer {
 
         // Ändra linjetjockleken
         GLES30.glLineWidth(2.5f);
-        // Add program to OpenGL environment
+        // Använder detta program
         GLES30.glUseProgram(mSynapseProgram);
 
-        // get handle to vertex shader's vPosition member
+        // Hämtar handle till position
         mPositionHandle = GLES30.glGetAttribLocation(mSynapseProgram, "vPosition");
 
-        // Enable a handle to the triangle vertices
+        // Sätter på handle
         GLES30.glEnableVertexAttribArray(mPositionHandle);
 
-        // Prepare the triangle coordinate data
+        // Laddar över data (koordinater)
         GLES30.glVertexAttribPointer(
                 mPositionHandle, COORDS_PER_VERTEX,
                 GLES30.GL_FLOAT, false,
                 vertexStride, synPosBuffer);
 
 
-        // get handle to vertex shader's vPosition member
+        // Gör samma för potential
         mPotentialHandle = GLES30.glGetAttribLocation(mSynapseProgram, "vPotential");
-
-        // Enable a handle to the triangle vertices
         GLES30.glEnableVertexAttribArray(mPotentialHandle);
-
-        // Prepare the triangle coordinate data
         GLES30.glVertexAttribPointer(
                 mPotentialHandle, 1,
                 GLES30.GL_FLOAT, false,
                 4, synPotBuffer);
 
-        // get handle to shape's transformation matrix
+        // Hämtar handle till MVP-matris
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mSynapseProgram, "uMVPMatrix");
         checkGlError("glGetUniformLocation");
 
-        // Apply the projection and view transformation
+        // Laddar över matrisen
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
         checkGlError("glUniformMatrix4fv");
 
-        // Draw the triangle
+        // Ritar hjärnan
         GLES30.glDrawArrays(GLES30.GL_LINES, 0, vertexCount);
 
-        // Disable vertex array
+        // Stänger av handles
         GLES30.glDisableVertexAttribArray(mPositionHandle);
         GLES30.glDisableVertexAttribArray(mPotentialHandle);
     }
 
+    // Hämtar koordinater från LibJNIWrapper, och lägger dom i FloatBuffer
     private void updatePosBuffer(){
+        // Lägger koordinater i float array
         float[] connections = getSynConnections();
 
+        // Räknar ut nytt antal hörn
         vertexCount = connections.length / COORDS_PER_VERTEX;
 
+        // Lägger data i ByteBuffer
         ByteBuffer bb = ByteBuffer.allocateDirect(connections.length * 4);
-        bb.order(ByteOrder.nativeOrder());
+        bb.order(ByteOrder.nativeOrder()); // Använder föredragen ordning
 
+        // Gör om till FloatBuffer
         synPosBuffer = bb.asFloatBuffer();
         synPosBuffer.put(connections);
         synPosBuffer.position(0);
     }
 
+    // Gör samma för potentialer
     private void updatePotBuffer(){
         float[] potentials = getSynPotentials();
 
@@ -157,14 +140,16 @@ public class BrainDrawer {
         synPotBuffer.position(0);
     }
 
+    // Hämtar fil, och returnerar string
     private String readFileAsString(String filePath) {
         InputStream input;
-        String text = "";
+        String text = ""; // Ut-String
 
         try {
-            input = context.getAssets().open(filePath);
+            input = context.getAssets().open(filePath); // Öppnar fil
 
-            int size = input.available();
+            int size = input.available(); // Räknar ut längd
+            // Gör resten
             byte[] buffer = new byte[size];
             input.read(buffer);
             input.close();
@@ -172,8 +157,8 @@ public class BrainDrawer {
             // byte buffer into a string
             text = new String(buffer);
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException e) {// Om det går fel
+            e.printStackTrace(); // Logga det
         }
 
         return text;
