@@ -30,6 +30,12 @@ JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_runBrain
 }
 
 extern "C"
+JNIEXPORT void JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_touchEventCallback
+        (JNIEnv * env, jclass cls, jfloat dx, jfloat dy) {
+    renderer->changeCamera(dx, dy);
+}
+
+extern "C"
 JNIEXPORT jfloatArray JNICALL Java_com_example_axel_spikingbrain_LibJNIWrapper_getMVPMatrix
         (JNIEnv * env, jclass cls, jfloat ratio) {
 

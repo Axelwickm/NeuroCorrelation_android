@@ -7,7 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import static com.example.axel.spikingbrain.LibJNIWrapper.init;
 
 public class MainActivity extends AppCompatActivity {
-    GLSurfaceView glSurfaceView; // Surface view som OpenGl använder
+    MyGLSurfaceView glSurfaceView; // Surface view som OpenGl använder
     private boolean rendererSet; // Ser till att inte göra nått dumt om inte renderaren är fixad än
 
     @Override
@@ -18,10 +18,8 @@ public class MainActivity extends AppCompatActivity {
         // Initerar LibJNIWrapper
         init();
 
-        glSurfaceView = new GLSurfaceView(this);
+        glSurfaceView = new MyGLSurfaceView(this);
 
-        glSurfaceView.setEGLContextClientVersion(3); // Använd OpenGL 3
-        glSurfaceView.setRenderer(new MyGLRenderer(getBaseContext())); // Sätter renderar-klassen som renderare
         rendererSet = true; // Nu är det inte dumt att använda renderaren längre
         setContentView(glSurfaceView);
 

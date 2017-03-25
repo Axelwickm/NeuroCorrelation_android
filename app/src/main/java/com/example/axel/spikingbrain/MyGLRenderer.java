@@ -4,6 +4,7 @@ import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
+import android.view.MotionEvent;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -19,6 +20,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private float[] mMVPMatrix = new float[16];
 
     // Bildförhållande
+    private float width, height;
     private float ratio;
 
     // Konstruktorn sätter bara kontexten
@@ -81,7 +83,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         // Rätar ut och ändrar bildförhållande
         GLES30.glViewport(0, 0, width, height);
+        this.width = width; this.height = height;
         ratio = (float) width / height;
     }
-
 }

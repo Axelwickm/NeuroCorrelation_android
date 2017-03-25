@@ -36,6 +36,8 @@ class NeuCor_Renderer {
         std::vector<float> getMVPmatrix(float ratio);
         renderArrays getRenderArrays();
 
+        void changeCamera(float dx, float dy);
+
         enum cameraModes{ CAMERA_MOUSE_LOOK, CAMERA_ORBIT, CAMERA_ORBIT_MOMENTUM, CAMERA_count};
         std::vector<std::string> cameraModeNames = {"Mouse look", "Orbit", "Orbit momentum"};
         cameraModes cameraMode;
@@ -109,6 +111,9 @@ class NeuCor_Renderer {
         glm::mat4 vp;
         double cursorX, cursorY;
         bool navigationMode, mouseInWindow, showInterface;
+
+        float deltaX = 0.0; //cursorX-xpos;
+        float deltaY = 0.0; //cursorY-ypos;
 
         CallbackType destructCallback;
 

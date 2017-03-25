@@ -303,11 +303,14 @@ void NeuCor_Renderer::updateView(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void NeuCor_Renderer::changeCamera(float dx, float dy){
+    deltaX += dx;
+    deltaY += dy;
+}
+
 std::vector<float> NeuCor_Renderer::getMVPmatrix(float ratio) {
-    float deltaX = 0.0; //cursorX-xpos;
-    float deltaY = 0.0; //cursorY-ypos;
     deltaTime = 0.01;
-    static glm::vec2 momentum(0.05, 0.1);
+    static glm::vec2 momentum(0.0, 0.0);
 
     glm::vec2 cameraPan(0.0, 0.0);
     /*if (ImGui::IsMouseDragging(0, 0) && navigationMode){
@@ -315,7 +318,7 @@ std::vector<float> NeuCor_Renderer::getMVPmatrix(float ratio) {
     }*/
 
     if (cameraMode == CAMERA_ORBIT_MOMENTUM){
-        if (navigationMode) momentum += glm::vec2(deltaX, -deltaY) * deltaTime / 100.f;
+        if (navigationMode) momentum = (momentum*15.f+glm::vec2(deltaX, deltaY))/16.f; // deltaTime;
         camHA += momentum.x*deltaTime;
         camVA += momentum.y*deltaTime;
     }
@@ -324,6 +327,7 @@ std::vector<float> NeuCor_Renderer::getMVPmatrix(float ratio) {
         camVA  += 0.15 * deltaTime * deltaY;
         momentum = glm::vec2(0.0, 0.0);
     }
+    deltaX = 0.0; deltaY = 0.0;
 
     glm::vec3 focusPoint(0.0, 0.0, 0.0);
 

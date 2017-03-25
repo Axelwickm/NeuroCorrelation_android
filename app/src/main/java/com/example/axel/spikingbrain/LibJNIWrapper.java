@@ -11,6 +11,9 @@ public class LibJNIWrapper {
     // Simulerar hjärna
     public static native void runBrain();
 
+    // Förmedlar Touch-events
+    public static native void touchEventCallback(float dx, float dy);
+
     // Ger MVP-matris
     public static native float[] getMVPMatrix(float MVPmatrix);
 
